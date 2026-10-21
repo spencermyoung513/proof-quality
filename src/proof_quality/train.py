@@ -12,7 +12,36 @@ from proof_quality.datamodule import ProofPreferenceDataModule
 from proof_quality.model import RewardModel
 from proof_quality.helpers import LogExampleRewards, fix_random_seed, get_ckpt_callbacks
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, PreTrainedModel
+
+
+def load_text_backbone(model_name: str) -> PreTrainedModel:
+    """Load the text backbone for `model_name`, without the language modeling head.
+
+    Args:
+        model_name: Hugging Face model id or local checkpoint path.
+
+    Returns:
+        The text backbone. Its `forward` method returns `last_hidden_state` and does not compute vocab logits.
+    """
+    model = AutoModel.from_pretrained(model_name)
+    text_backbone = _unwrap_text_backbone(model)
+    text_backbone.config.use_cache = False
+    return text_backbone
+
+
+def _unwrap_text_backbone(model: PreTrainedModel) -> PreTrainedModel:
+    language_model = getattr(model, "language_model", None)
+    if language_model is not None:
+        return language_model
+
+    inner = getattr(model, "model", None)
+    if isinstance(inner, PreTrainedModel) and (
+        getattr(inner, "language_model", None) is not None
+        or hasattr(inner, "embed_tokens")
+    ):
+        return _unwrap_text_backbone(inner)
+    return model
 
 
 def train(config: TrainingConfig):
@@ -28,7 +57,7 @@ def train(config: TrainingConfig):
             "WANDB_PROJECT, WANDB_ENTITY, and WANDB_API_KEY must be set in the local environment."
         )
 
-    base_lm = AutoModelForCausalLM.from_pretrained(config.model.base_lm)
+    base_lm = load_text_backbone(config.model.base_lm)
     tokenizer = AutoTokenizer.from_pretrained(config.model.base_lm)
 
     datamodule = ProofPreferenceDataModule(

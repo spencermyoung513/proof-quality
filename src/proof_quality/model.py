@@ -30,7 +30,7 @@ class RewardModel(L.LightningModule):
     ):
         super().__init__()
         peft_config = LoraConfig(
-            task_type=TaskType.CAUSAL_LM,
+            task_type=TaskType.FEATURE_EXTRACTION,
             r=lora_rank,
             lora_alpha=lora_scaling_factor,
             lora_dropout=lora_dropout,
@@ -81,12 +81,12 @@ class RewardModel(L.LightningModule):
         outputs: BaseModelOutput = self.lm(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            output_hidden_states=True,
+            use_cache=False,
             return_dict=True,
         )
-        token_level_reprs: Float[Tensor, "B N D"] = outputs.hidden_states[-1]
-
-        seq_reprs = self._get_last_token_reprs(token_level_reprs, attention_mask)
+        seq_reprs = self._get_last_token_reprs(
+            outputs.last_hidden_state, attention_mask
+        )
         rewards = torch.squeeze(self.head(seq_reprs), -1)
 
         return rewards
@@ -104,8 +104,8 @@ class RewardModel(L.LightningModule):
         )
         loss = -F.logsigmoid(chosen_rewards - rejected_rewards).mean()
         acc = (chosen_rewards > rejected_rewards).float().mean()
-        self.log("train/loss", loss, prog_bar=True)
-        self.log("train/acc", acc)
+        self.log("train/loss", loss, prog_bar=True, on_step=True)
+        self.log("train/acc", acc, on_epoch=True)
         return loss
 
     def validation_step(
@@ -121,8 +121,8 @@ class RewardModel(L.LightningModule):
         )
         loss = -F.logsigmoid(chosen_rewards - rejected_rewards).mean()
         acc = (chosen_rewards > rejected_rewards).float().mean()
-        self.log("val/loss", loss, prog_bar=True)
-        self.log("val/acc", acc)
+        self.log("val/loss", loss, prog_bar=True, on_epoch=True)
+        self.log("val/acc", acc, on_epoch=True)
         return loss
 
     def configure_optimizers(self):
