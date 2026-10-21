@@ -20,7 +20,7 @@ def get_ckpt_callbacks(ckpt_dir: Path) -> list[ModelCheckpoint]:
     return [
         ModelCheckpoint(
             dirpath=ckpt_dir,
-            monitor="val/ce-loss",
+            monitor="val/loss",
             filename="best_val_loss",
             save_top_k=1,
             save_last=True,

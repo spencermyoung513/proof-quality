@@ -19,7 +19,6 @@ def to_kebab_case(string: str) -> str:
 class RunConfig(BaseModel):
     name: str
     ckpt_dir: Path = Path("ckpt")
-    num_trials: int = 1
     device: Literal["cpu", "cuda", "mps"] = "cpu"
     precision: Literal["bf16-mixed", "32-true"] = "32-true"
     seed: int | None = None

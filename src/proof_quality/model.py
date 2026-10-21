@@ -39,6 +39,8 @@ class RewardModel(L.LightningModule):
         self.lm = get_peft_model(base_lm, peft_config)
         self.lm.print_trainable_parameters()
         self.head = nn.Linear(hidden_size, 1)
+        # from_pretrained leaves the LM in eval mode
+        self.train()
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.warmup_ratio = warmup_ratio

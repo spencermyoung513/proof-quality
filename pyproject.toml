@@ -13,6 +13,7 @@ dependencies = [
     "pydantic>=2.14.1",
     "torch>=2.14.1",
     "transformers>=5.20.2",
+    "wandb>=0.31.0",
 ]
 
 [build-system]
@@ -21,3 +22,6 @@ build-backend = "hatchling.build"
 
 [tool.ruff.lint]
 extend-ignore = ["F722"]
+
+[project.scripts]
+train = "proof_quality.train:main"
