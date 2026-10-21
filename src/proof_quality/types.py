@@ -8,3 +8,8 @@ class TokenizedPreferenceBatch(TypedDict):
     chosen_attention_mask: Float[Tensor, "B N"]
     rejected_input_ids: Int[Tensor, "B N"]
     rejected_attention_mask: Float[Tensor, "B N"]
+
+
+class DecodedPreferenceExample(TypedDict):
+    chosen: str
+    rejected: str

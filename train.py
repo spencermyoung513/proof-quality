@@ -10,7 +10,7 @@ from lightning.pytorch.loggers import WandbLogger
 from proof_quality.configs import TrainingConfig
 from proof_quality.datamodule import ProofPreferenceDataModule
 from proof_quality.model import RewardModel
-from proof_quality.helpers import fix_random_seed, get_ckpt_callbacks
+from proof_quality.helpers import LogExampleRewards, fix_random_seed, get_ckpt_callbacks
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -58,6 +58,7 @@ def train(config: TrainingConfig):
     ckpt_dir = config.run.ckpt_dir / config.run.name
     callbacks = [
         *get_ckpt_callbacks(ckpt_dir),
+        LogExampleRewards(),
         LearningRateMonitor(logging_interval="step"),
     ]
 

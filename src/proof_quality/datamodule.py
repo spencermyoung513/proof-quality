@@ -102,6 +102,23 @@ class ProofPreferenceDataModule(L.LightningDataModule):
             "rejected_attention_mask": rejected["attention_mask"],
         }
 
+    def preview_batch(self, num_examples: int) -> TokenizedPreferenceBatch:
+        """Load a preview batch from the training split.
+
+        Args:
+            num_examples: Number of examples to load.
+
+        Returns:
+            A preview batch of (tokenized) examples.
+        """
+        loader = DataLoader(
+            dataset=self.train,
+            batch_size=num_examples,
+            shuffle=False,
+            collate_fn=self._collate_fn,
+        )
+        return next(iter(loader))
+
     def train_dataloader(self) -> DataLoader:
         return DataLoader(
             dataset=self.train,
