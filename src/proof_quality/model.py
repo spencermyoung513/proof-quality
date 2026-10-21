@@ -105,7 +105,7 @@ class RewardModel(L.LightningModule):
         loss = -F.logsigmoid(chosen_rewards - rejected_rewards).mean()
         acc = (chosen_rewards > rejected_rewards).float().mean()
         self.log("train/loss", loss, prog_bar=True, on_step=True)
-        self.log("train/acc", acc, on_epoch=True)
+        self.log("train/acc", acc, on_epoch=True, on_step=False)
         return loss
 
     def validation_step(
