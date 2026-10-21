@@ -1,0 +1,20 @@
+[project]
+name = "proof-quality"
+version = "0.1.0"
+description = "Code repo for training proof quality reward models"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "datasets>=5.1.0",
+    "dotenv>=0.9.9",
+    "jaxtyping>=0.3.7",
+    "lightning>=2.6.6",
+    "peft>=0.21.2",
+    "pydantic>=2.14.1",
+    "torch>=2.14.1",
+    "transformers>=5.20.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
