@@ -22,6 +22,7 @@ class RunConfig(BaseModel):
     device: Literal["cpu", "cuda", "mps"] = "cpu"
     precision: Literal["bf16-mixed", "32-true"] = "32-true"
     seed: int | None = None
+    smoke_test: bool = False
 
     @field_validator("name")
     def cast_to_kebab_case(cls, v: str) -> str:

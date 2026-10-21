@@ -1,0 +1,20 @@
+run:
+  name: gemma-4-E4B-it-lr-5e-5
+  ckpt_dir: ckpt
+  device: cuda
+  precision: bf16-mixed
+  seed: 1998
+optimizer:
+  batch_size: 8
+  num_epochs: 5
+  weight_decay: 0.0
+  learning_rate: 5e-5
+  warmup_ratio: 0.0
+model:
+  base_lm: google/gemma-4-E4B-it
+  lora_rank: 32
+  lora_scaling_factor: 32
+  lora_dropout: 0.0
+  max_length: 4096
+data:
+  root: data/proofjudge

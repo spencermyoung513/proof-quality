@@ -72,6 +72,7 @@ def train(config: TrainingConfig):
         callbacks=callbacks,
         logger=logger,
         precision=config.run.precision,
+        fast_dev_run=config.run.smoke_test,
     )
     trainer.fit(model=model, datamodule=datamodule)
 
