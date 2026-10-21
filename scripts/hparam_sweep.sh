@@ -12,8 +12,8 @@
 #SBATCH --partition=gpu-l40s
 #SBATCH --qos=embers
 #SBATCH --gres=gpu:L40S:1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=48G
 #SBATCH --time=02:00:00
 #SBATCH --array=0-3%1
 #SBATCH --output=logs/%x-%A_%a.out
