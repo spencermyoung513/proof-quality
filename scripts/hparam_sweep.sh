@@ -9,9 +9,9 @@
 
 #SBATCH --job-name=gemma4-lora-hparam
 #SBATCH --account=gts-smussmann3
-#SBATCH --partition=gpu-a100
+#SBATCH --partition=gpu-l40s
 #SBATCH --qos=embers
-#SBATCH --gres=gpu:A100:1
+#SBATCH --gres=gpu:L40S:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=02:00:00
