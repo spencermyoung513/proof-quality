@@ -14,6 +14,28 @@ ROOT = Path(__file__).resolve().parent / "data" / "proofjudge"
 SPLITS = ("dev", "test")
 
 
+def _messages(prompt: str, completion: str) -> list[dict[str, str]]:
+    return [
+        {"role": "user", "content": prompt},
+        {"role": "assistant", "content": completion},
+    ]
+
+
+def _tokenized_length(
+    tokenizer: PreTrainedTokenizerBase, prompt: str, completion: str
+) -> int:
+    """Token count for one chat, using the same template as batch collation."""
+    encoded = tokenizer.apply_chat_template(
+        _messages(prompt, completion),
+        tokenize=True,
+        add_generation_prompt=False,
+        padding=False,
+        truncation=False,
+        return_dict=True,
+    )
+    return len(encoded["input_ids"])
+
+
 class MathlibProofPairsDataset:
     def __init__(self, split: str, root: Path | str = ROOT):
         if split not in SPLITS:
@@ -45,7 +67,7 @@ class ProofPreferenceDataModule(L.LightningDataModule):
         Args:
             tokenizer: Used to tokenize the text before LM consumption.
             batch_size: Number of samples to include in each batch.
-            max_length: Maximum length of the tokenized sequences (we pad to this length).
+            max_length: Maximum tokenized length. Pairs with a longer chosen or rejected sequence are dropped; remaining batches are truncated to this length.
             root: Root directory of the dataset.
         """
         super().__init__()
@@ -56,13 +78,38 @@ class ProofPreferenceDataModule(L.LightningDataModule):
 
     def setup(self, stage: str | None = None) -> None:
         if stage in ("fit", None):
-            self.train = MathlibProofPairsDataset("dev", self.root).to_hf_dataset()
+            train = MathlibProofPairsDataset("dev", self.root).to_hf_dataset()
+            self.train = self._drop_truncated(train, "dev")
         if stage in ("fit", "validate", None):
-            self.val = MathlibProofPairsDataset("test", self.root).to_hf_dataset()
+            val = MathlibProofPairsDataset("test", self.root).to_hf_dataset()
+            self.val = self._drop_truncated(val, "test")
         if stage == "test":
             raise NotImplementedError(
                 f"Setup for stage '{stage!r}' is not implemented yet"
             )
+
+    def _drop_truncated(
+        self, dataset: datasets.Dataset, split: str
+    ) -> datasets.Dataset:
+        """Drop pairs whose chosen or rejected sequence would be truncated."""
+        keep = [
+            i
+            for i, row in enumerate(dataset)
+            if _tokenized_length(self.tokenizer, row["prompt"], row["chosen"])
+            <= self.max_length
+            and _tokenized_length(self.tokenizer, row["prompt"], row["rejected"])
+            <= self.max_length
+        ]
+        dropped = len(dataset) - len(keep)
+        if not keep:
+            raise ValueError(
+                f"All {len(dataset)} {split} samples exceed max_length={self.max_length}."
+            )
+        print(
+            f"Dropped {dropped}/{len(dataset)} {split} samples longer than "
+            f"max_length={self.max_length}."
+        )
+        return dataset.select(keep)
 
     def _tokenize_conversations(self, conversations: list[list[dict[str, str]]]):
         return self.tokenizer.apply_chat_template(
@@ -78,22 +125,10 @@ class ProofPreferenceDataModule(L.LightningDataModule):
 
     def _collate_fn(self, rows: list[dict]) -> TokenizedPreferenceBatch:
         chosen = self._tokenize_conversations(
-            [
-                [
-                    {"role": "user", "content": row["prompt"]},
-                    {"role": "assistant", "content": row["chosen"]},
-                ]
-                for row in rows
-            ]
+            [_messages(row["prompt"], row["chosen"]) for row in rows]
         )
         rejected = self._tokenize_conversations(
-            [
-                [
-                    {"role": "user", "content": row["prompt"]},
-                    {"role": "assistant", "content": row["rejected"]},
-                ]
-                for row in rows
-            ]
+            [_messages(row["prompt"], row["rejected"]) for row in rows]
         )
         return {
             "chosen_input_ids": chosen["input_ids"],
