@@ -86,18 +86,32 @@ class LogExampleRewards(Callback):
     we can see how the rewards evolve during training.
     """
 
+    _TABLE_COLUMNS = [
+        "epoch",
+        "global_step",
+        "example",
+        "chosen",
+        "chosen_reward",
+        "rejected",
+        "rejected_reward",
+        "reward_margin",
+    ]
+
     def __init__(self, num_examples: int = 4):
         self.num_examples = num_examples
         self._batch: TokenizedPreferenceBatch | None = None
         self._examples: list[DecodedPreferenceExample] | None = None
+        self._rows: list[list[int | float | str]] = []
 
     def on_train_epoch_start(
         self, trainer: L.Trainer, pl_module: L.LightningModule
     ) -> None:
         if not trainer.is_global_zero:
             return
-        log_text = getattr(trainer.logger, "log_text", None)
-        if log_text is None:
+        logger = trainer.logger
+        log_text = getattr(logger, "log_text", None)
+        log_metrics = getattr(logger, "log_metrics", None)
+        if log_text is None and log_metrics is None:
             return
         if self._batch is None or self._examples is None:
             self._batch = trainer.datamodule.preview_batch(self.num_examples)
@@ -115,30 +129,35 @@ class LogExampleRewards(Callback):
             self._batch["rejected_input_ids"],
             self._batch["rejected_attention_mask"],
         )
-        rows = [
-            [
-                example["chosen"],
-                chosen_reward,
-                example["rejected"],
-                rejected_reward,
-                chosen_reward - rejected_reward,
-            ]
-            for example, chosen_reward, rejected_reward in zip(
-                self._examples, chosen_rewards, rejected_rewards, strict=True
+        metrics: dict[str, float] = {}
+        for example_idx, (example, chosen_reward, rejected_reward) in enumerate(
+            zip(self._examples, chosen_rewards, rejected_rewards, strict=True)
+        ):
+            reward_margin = chosen_reward - rejected_reward
+            self._rows.append(
+                [
+                    trainer.current_epoch,
+                    trainer.global_step,
+                    example_idx,
+                    example["chosen"],
+                    chosen_reward,
+                    example["rejected"],
+                    rejected_reward,
+                    reward_margin,
+                ]
             )
-        ]
-        log_text(
-            key="train/examples",
-            columns=[
-                "chosen",
-                "chosen_reward",
-                "rejected",
-                "rejected_reward",
-                "reward_margin",
-            ],
-            data=rows,
-            step=trainer.global_step,
-        )
+            metrics[f"train/examples/{example_idx}/chosen_reward"] = chosen_reward
+            metrics[f"train/examples/{example_idx}/rejected_reward"] = rejected_reward
+            metrics[f"train/examples/{example_idx}/reward_margin"] = reward_margin
+        if log_metrics is not None:
+            log_metrics(metrics, step=trainer.global_step)
+        if log_text is not None:
+            log_text(
+                key="train/examples",
+                columns=self._TABLE_COLUMNS,
+                data=self._rows,
+                step=trainer.global_step,
+            )
 
     def _score(
         self,
