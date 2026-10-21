@@ -99,6 +99,7 @@ def train(config: TrainingConfig):
         check_val_every_n_epoch=1,
         enable_model_summary=False,
         callbacks=callbacks,
+        accumulate_grad_batches=config.optimizer.accumulate_grad_batches,
         logger=logger,
         precision=config.run.precision,
         fast_dev_run=config.run.smoke_test,

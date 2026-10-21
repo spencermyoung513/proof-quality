@@ -31,6 +31,7 @@ class RunConfig(BaseModel):
 
 class OptimizerConfig(BaseModel):
     batch_size: int = 4
+    accumulate_grad_batches: int = 1
     num_epochs: int = 10
     weight_decay: float = 0.01
     learning_rate: float = 1e-3
