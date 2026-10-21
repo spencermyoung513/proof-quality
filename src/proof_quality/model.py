@@ -104,7 +104,7 @@ class RewardModel(L.LightningModule):
         )
         loss = -F.logsigmoid(chosen_rewards - rejected_rewards).mean()
         acc = (chosen_rewards > rejected_rewards).float().mean()
-        self.log("train/loss", loss)
+        self.log("train/loss", loss, prog_bar=True)
         self.log("train/acc", acc)
         return loss
 
@@ -121,7 +121,7 @@ class RewardModel(L.LightningModule):
         )
         loss = -F.logsigmoid(chosen_rewards - rejected_rewards).mean()
         acc = (chosen_rewards > rejected_rewards).float().mean()
-        self.log("val/loss", loss)
+        self.log("val/loss", loss, prog_bar=True)
         self.log("val/acc", acc)
         return loss
 
