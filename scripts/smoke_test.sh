@@ -6,7 +6,7 @@
 #SBATCH --job-name=gemma4-lora-smoke
 #SBATCH --account=gts-smussmann3
 #SBATCH --partition=gpu-l40s
-#SBATCH --qos=embers
+#SBATCH --qos=inferno
 #SBATCH --gres=gpu:L40S:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=48G
