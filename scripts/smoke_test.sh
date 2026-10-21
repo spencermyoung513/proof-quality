@@ -10,7 +10,7 @@
 #SBATCH --gres=gpu:L40S:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=48G
-#SBATCH --time=01:00:00
+#SBATCH --time=00:15:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
@@ -18,8 +18,7 @@ set -euo pipefail
 
 module load cuda/12.1 2>/dev/null || true
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="/storage/project/r-smussmann3-0/syoung328/code/proof-quality"
 cd "$REPO_ROOT"
 
 if [[ -f "$REPO_ROOT/.venv/bin/activate" ]]; then
