@@ -30,8 +30,7 @@ CONFIGS=(
 
 module load cuda/12.1 2>/dev/null || true
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="/storage/project/r-smussmann3-0/syoung328/code/proof-quality"
 SCRATCH="/storage/home/hcoda1/1/syoung328/scratch"
 VENV="${SCRATCH}/venvs/.proof-quality-venv"
 HF_HOME="${SCRATCH}/weights/hf_home"
