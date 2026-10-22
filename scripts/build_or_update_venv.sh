@@ -18,6 +18,13 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 mkdir -p "$(dirname "$VENV")"
+
+if [[ -d "$VENV" ]] && ! "$VENV/bin/python" -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" 2>/dev/null; then
+    echo "Removing ${VENV}: bin/python does not run Python >= 3.10."
+    rm -rf "$VENV"
+fi
+
 echo "Syncing ${VENV}"
 UV_PROJECT_ENVIRONMENT="$VENV" uv sync --frozen --directory "$REPO_ROOT"
+"$VENV/bin/python" -c "import sys, torch; print(f'{sys.executable}: Python {sys.version.split()[0]}, torch {torch.__version__}')"
 echo "Environment ready: ${VENV}"

@@ -8,7 +8,7 @@ To run code from this repository on PACE, you will first need to build a virtual
 bash scripts/build_or_update_venv.sh
 ```
 
-All other SLURM scripts activate this venv (located at `/storage/home/hcoda1/1/syoung328/scratch`) before executing any Python code.
+The SLURM scripts run Python from that environment directly (`/storage/home/hcoda1/1/syoung328/scratch/venvs/.proof-quality-venv/bin/python`).
 
 ## Training a Model
 

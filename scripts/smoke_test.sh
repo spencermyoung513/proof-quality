@@ -43,19 +43,18 @@ if [[ ! -f "$REPO_ROOT/data/proofjudge/dev.jsonl" || ! -f "$REPO_ROOT/data/proof
     exit 1
 fi
 
-if [[ ! -f "$VENV/bin/activate" ]]; then
-    echo "Missing $VENV. Rebuild it with scripts/build_or_update_venv.sh." >&2
+if [[ ! -x "$VENV/bin/python" ]]; then
+    echo "Missing a usable interpreter at $VENV/bin/python." >&2
+    echo "Rebuild it with scripts/build_or_update_venv.sh." >&2
     exit 1
 fi
-# shellcheck disable=SC1091
-source "$VENV/bin/activate"
 
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 export PYTHONPATH="$REPO_ROOT/src"
 export HF_HOME
 mkdir -p "$HF_HOME"
 
-python -u - <<'PY'
+"$VENV/bin/python" -u - <<'PY'
 import sys
 import torch
 
@@ -65,5 +64,5 @@ if not torch.cuda.is_available():
 print(f"device={torch.cuda.get_device_name(0)}")
 PY
 
-python -u src/proof_quality/train.py --config configs/gemma/smoke.yaml
+"$VENV/bin/python" -u src/proof_quality/train.py --config configs/gemma/smoke.yaml
 echo "Smoke test completed."
