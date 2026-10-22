@@ -19,7 +19,9 @@ set -euo pipefail
 module load cuda/12.1 2>/dev/null || true
 
 REPO_ROOT="/storage/project/r-smussmann3-0/syoung328/code/proof-quality"
-VENV="/storage/home/hcoda1/1/syoung328/scratch/proof-quality/.venv"
+SCRATCH="/storage/home/hcoda1/1/syoung328/scratch"
+VENV="${SCRATCH}/venvs/.proof-quality-venv"
+HF_HOME="${SCRATCH}/weights/hf_home"
 cd "$REPO_ROOT"
 
 echo "===== Job information ====="
@@ -27,6 +29,7 @@ echo "Job ID:       ${SLURM_JOB_ID:-local}"
 echo "Node:         ${SLURMD_NODENAME:-$(hostname)}"
 echo "REPO_ROOT:    $REPO_ROOT"
 echo "Venv:         $VENV"
+echo "HF_HOME:      $HF_HOME"
 echo "GPU:"
 nvidia-smi
 echo "==========================="
@@ -49,7 +52,7 @@ source "$VENV/bin/activate"
 
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 export PYTHONPATH="$REPO_ROOT/src"
-export HF_HOME="${HF_HOME:-/storage/project/r-smussmann3-0/${USER}/hf_home}"
+export HF_HOME
 mkdir -p "$HF_HOME"
 
 python -u - <<'PY'

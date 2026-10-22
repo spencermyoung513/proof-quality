@@ -4,7 +4,7 @@ import torch
 from pathlib import Path
 from torch import Tensor
 import lightning as L
-from lightning.pytorch.callbacks import Callback, ModelCheckpoint
+from lightning.pytorch.callbacks import Callback
 from transformers import PreTrainedTokenizerBase
 from proof_quality.schema import DecodedPreferenceExample, TokenizedPreferenceBatch
 
@@ -16,17 +16,40 @@ def fix_random_seed(random_seed: int | None):
         torch.manual_seed(random_seed)
 
 
-def get_ckpt_callbacks(ckpt_dir: Path) -> list[ModelCheckpoint]:
-    return [
-        ModelCheckpoint(
-            dirpath=ckpt_dir,
-            monitor="val/loss",
-            filename="best_val_loss",
-            save_top_k=1,
-            save_last=True,
-            enable_version_counter=False,
-        )
-    ]
+def get_ckpt_callbacks(ckpt_dir: Path) -> list[Callback]:
+    return [SaveLoRAAdapter(ckpt_dir)]
+
+
+class SaveLoRAAdapter(Callback):
+    """Save the LoRA adapter and reward head, not the frozen base model.
+
+    `best_val_loss.ckpt` is replaced only when validation loss improves.
+    `last.ckpt` is replaced after every validation epoch.
+    """
+
+    def __init__(self, ckpt_dir: Path):
+        self.ckpt_dir = ckpt_dir
+        self.best_val_loss = float("inf")
+
+    def on_validation_end(
+        self, trainer: L.Trainer, pl_module: L.LightningModule
+    ) -> None:
+        if trainer.sanity_checking or not trainer.is_global_zero:
+            return
+        loss = trainer.callback_metrics.get("val/loss")
+        if loss is None:
+            return
+        loss_value = float(loss)
+        self._save(pl_module, self.ckpt_dir / "last.ckpt")
+        if loss_value < self.best_val_loss:
+            self.best_val_loss = loss_value
+            self._save(pl_module, self.ckpt_dir / "best_val_loss.ckpt")
+
+    def _save(self, pl_module: L.LightningModule, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        torch.save(pl_module.adapter_state(), tmp)
+        tmp.replace(path)
 
 
 def decode_batch(

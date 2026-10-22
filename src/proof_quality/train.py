@@ -103,6 +103,8 @@ def train(config: TrainingConfig):
         logger=logger,
         precision=config.run.precision,
         fast_dev_run=config.run.smoke_test,
+        # Skip Lightning checkpoint so we can save only the LoRA adapter + reward head.
+        enable_checkpointing=False,
     )
     trainer.fit(model=model, datamodule=datamodule)
 

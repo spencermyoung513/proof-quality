@@ -7,7 +7,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCRATCH="/storage/home/hcoda1/1/syoung328/scratch"
-VENV="${SCRATCH}/proof-quality/.venv"
+VENV="${SCRATCH}/venvs/.proof-quality-venv"
 
 export UV_CACHE_DIR="${SCRATCH}/.cache/uv"
 export UV_PYTHON_INSTALL_DIR="${SCRATCH}/uv/python"

@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 import torch
 from torch import Tensor
 import torch.nn as nn
@@ -8,7 +9,13 @@ from transformers import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutput
 from jaxtyping import Float, Int
 from proof_quality.schema import TokenizedPreferenceBatch
-from peft import get_peft_model, LoraConfig, TaskType
+from peft import (
+    LoraConfig,
+    TaskType,
+    get_peft_model,
+    get_peft_model_state_dict,
+    set_peft_model_state_dict,
+)
 
 
 class RewardModel(L.LightningModule):
@@ -44,6 +51,44 @@ class RewardModel(L.LightningModule):
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.warmup_ratio = warmup_ratio
+
+    def adapter_state(self) -> dict:
+        """LoRA weights, reward head, and the settings needed to rebuild them."""
+        lora = self.lm.peft_config["default"]
+        return {
+            "adapter": dict(get_peft_model_state_dict(self.lm)),
+            "reward_head": dict(self.head.state_dict()),
+            "lora_rank": lora.r,
+            "lora_scaling_factor": lora.lora_alpha,
+            "lora_dropout": lora.lora_dropout,
+            "learning_rate": self.learning_rate,
+            "weight_decay": self.weight_decay,
+            "warmup_ratio": self.warmup_ratio,
+        }
+
+    @classmethod
+    def from_checkpoint(
+        cls, base_lm: PreTrainedModel, path: Path | str
+    ) -> "RewardModel":
+        """Load a trained adapter on top of `base_lm`.
+
+        `base_lm` is the same pretrained backbone used in training, still without
+        a LoRA adapter. The checkpoint supplies the adapter and reward head.
+        """
+        ckpt = torch.load(path, map_location="cpu", weights_only=True)
+        model = cls(
+            base_lm=base_lm,
+            hidden_size=base_lm.config.hidden_size,
+            learning_rate=ckpt["learning_rate"],
+            weight_decay=ckpt["weight_decay"],
+            warmup_ratio=ckpt["warmup_ratio"],
+            lora_rank=ckpt["lora_rank"],
+            lora_scaling_factor=ckpt["lora_scaling_factor"],
+            lora_dropout=ckpt["lora_dropout"],
+        )
+        set_peft_model_state_dict(model.lm, ckpt["adapter"])
+        model.head.load_state_dict(ckpt["reward_head"])
+        return model
 
     def _get_last_token_reprs(
         self,

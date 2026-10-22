@@ -32,7 +32,10 @@ module load cuda/12.1 2>/dev/null || true
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-VENV="/storage/home/hcoda1/1/syoung328/scratch/proof-quality/.venv"
+SCRATCH="/storage/home/hcoda1/1/syoung328/scratch"
+VENV="${SCRATCH}/venvs/.proof-quality-venv"
+HF_HOME="${SCRATCH}/weights/hf_home"
+
 cd "$REPO_ROOT"
 
 if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
@@ -50,6 +53,7 @@ echo "Job ID:       ${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
 echo "Node:         ${SLURMD_NODENAME:-$(hostname)}"
 echo "REPO_ROOT:    $REPO_ROOT"
 echo "Venv:         $VENV"
+echo "HF_HOME:      $HF_HOME"
 echo "Config:       configs/gemma/${CONFIG_NAME}.yaml"
 echo "GPU:"
 nvidia-smi
@@ -73,7 +77,7 @@ source "$VENV/bin/activate"
 
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 export PYTHONPATH="$REPO_ROOT/src"
-export HF_HOME="${HF_HOME:-/storage/project/r-smussmann3-0/${USER}/hf_home}"
+export HF_HOME
 mkdir -p "$HF_HOME"
 
 python -u - <<'PY'
