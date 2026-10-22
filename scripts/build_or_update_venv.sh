@@ -6,11 +6,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-VENV="/storage/home/hcoda1/1/syoung328/scratch/proof-quality/.venv"
+SCRATCH="/storage/home/hcoda1/1/syoung328/scratch"
+VENV="${SCRATCH}/proof-quality/.venv"
 
+export UV_CACHE_DIR="${SCRATCH}/.cache/uv"
+export UV_PYTHON_INSTALL_DIR="${SCRATCH}/uv/python"
 export PATH="${HOME}/.local/bin:${PATH}"
 if ! command -v uv >/dev/null 2>&1; then
-    echo "uv is not on PATH. Install it on the cluster before syncing." >&2
+    echo "uv is not on PATH. Install it once, then rerun this script." >&2
     exit 1
 fi
 
