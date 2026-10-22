@@ -7,7 +7,7 @@ from typing import Iterator
 import lightning as L
 from torch.utils.data import DataLoader
 from transformers import PreTrainedTokenizerBase
-from proof_quality.types import TokenizedPreferenceBatch
+from proof_quality.schema import TokenizedPreferenceBatch
 
 
 ROOT = Path(__file__).resolve().parent / "data" / "proofjudge"

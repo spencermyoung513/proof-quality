@@ -6,7 +6,7 @@ from torch import Tensor
 import lightning as L
 from lightning.pytorch.callbacks import Callback, ModelCheckpoint
 from transformers import PreTrainedTokenizerBase
-from proof_quality.types import DecodedPreferenceExample, TokenizedPreferenceBatch
+from proof_quality.schema import DecodedPreferenceExample, TokenizedPreferenceBatch
 
 
 def fix_random_seed(random_seed: int | None):

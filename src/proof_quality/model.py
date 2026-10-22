@@ -7,7 +7,7 @@ import lightning as L
 from transformers import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutput
 from jaxtyping import Float, Int
-from proof_quality.types import TokenizedPreferenceBatch
+from proof_quality.schema import TokenizedPreferenceBatch
 from peft import get_peft_model, LoraConfig, TaskType
 
 
