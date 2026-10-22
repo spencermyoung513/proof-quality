@@ -21,11 +21,8 @@ module load cuda/12.1 2>/dev/null || true
 REPO_ROOT="/storage/project/r-smussmann3-0/syoung328/code/proof-quality"
 cd "$REPO_ROOT"
 
-if [[ -f "$REPO_ROOT/.venv/bin/activate" ]]; then
-    source "$REPO_ROOT/.venv/bin/activate"
-else
-    source /storage/project/r-smussmann3-0/shared/shared_venvs/default_venv/bin/activate
-fi
+# shellcheck source=job_venv.sh
+source "$REPO_ROOT/scripts/job_venv.sh"
 
 echo "===== Job information ====="
 echo "Job ID:       ${SLURM_JOB_ID:-local}"
@@ -43,6 +40,8 @@ if [[ ! -f "$REPO_ROOT/data/proofjudge/dev.jsonl" || ! -f "$REPO_ROOT/data/proof
     echo "Missing data/proofjudge/dev.jsonl or data/proofjudge/test.jsonl." >&2
     exit 1
 fi
+
+create_job_venv "$REPO_ROOT"
 
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 export PYTHONPATH="$REPO_ROOT/src"

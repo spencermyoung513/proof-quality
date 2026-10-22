@@ -34,6 +34,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
+# shellcheck source=job_venv.sh
+source "$REPO_ROOT/scripts/job_venv.sh"
+
 if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     echo "Submit with sbatch so SLURM_ARRAY_TASK_ID is set." >&2
     exit 1
@@ -43,12 +46,6 @@ if (( SLURM_ARRAY_TASK_ID < 0 || SLURM_ARRAY_TASK_ID >= ${#CONFIGS[@]} )); then
     exit 1
 fi
 CONFIG_NAME="${CONFIGS[$SLURM_ARRAY_TASK_ID]}"
-
-if [[ -f "$REPO_ROOT/.venv/bin/activate" ]]; then
-    source "$REPO_ROOT/.venv/bin/activate"
-else
-    source /storage/project/r-smussmann3-0/shared/shared_venvs/default_venv/bin/activate
-fi
 
 echo "===== Job information ====="
 echo "Job ID:       ${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
@@ -67,6 +64,8 @@ if [[ ! -f "$REPO_ROOT/data/proofjudge/dev.jsonl" || ! -f "$REPO_ROOT/data/proof
     echo "Missing data/proofjudge/dev.jsonl or data/proofjudge/test.jsonl." >&2
     exit 1
 fi
+
+create_job_venv "$REPO_ROOT"
 
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 export PYTHONPATH="$REPO_ROOT/src"
