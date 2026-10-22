@@ -43,6 +43,8 @@ class RewardModel(L.LightningModule):
             lora_dropout=lora_dropout,
             target_modules="all-linear",
         )
+        if getattr(base_lm, "supports_gradient_checkpointing", False):
+            base_lm.gradient_checkpointing_enable()
         self.lm = get_peft_model(base_lm, peft_config)
         self.lm.print_trainable_parameters()
         self.head = nn.Linear(hidden_size, 1)

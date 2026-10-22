@@ -3,6 +3,7 @@ from argparse import Namespace
 import os
 import lightning as L
 from dotenv import load_dotenv
+import torch
 import yaml
 from lightning.pytorch.callbacks import LearningRateMonitor
 from lightning.pytorch.loggers import WandbLogger
@@ -24,7 +25,7 @@ def load_text_backbone(model_name: str) -> PreTrainedModel:
     Returns:
         The text backbone. Its `forward` method returns `last_hidden_state` and does not compute vocab logits.
     """
-    model = AutoModel.from_pretrained(model_name)
+    model = AutoModel.from_pretrained(model_name, dtype=torch.bfloat16)
     text_backbone = _unwrap_text_backbone(model)
     text_backbone.config.use_cache = False
     return text_backbone
