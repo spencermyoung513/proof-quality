@@ -19,15 +19,14 @@ set -euo pipefail
 module load cuda/12.1 2>/dev/null || true
 
 REPO_ROOT="/storage/project/r-smussmann3-0/syoung328/code/proof-quality"
+VENV="/storage/home/hcoda1/1/syoung328/scratch/proof-quality/.venv"
 cd "$REPO_ROOT"
-
-# shellcheck source=job_venv.sh
-source "$REPO_ROOT/scripts/job_venv.sh"
 
 echo "===== Job information ====="
 echo "Job ID:       ${SLURM_JOB_ID:-local}"
 echo "Node:         ${SLURMD_NODENAME:-$(hostname)}"
 echo "REPO_ROOT:    $REPO_ROOT"
+echo "Venv:         $VENV"
 echo "GPU:"
 nvidia-smi
 echo "==========================="
@@ -41,7 +40,12 @@ if [[ ! -f "$REPO_ROOT/data/proofjudge/dev.jsonl" || ! -f "$REPO_ROOT/data/proof
     exit 1
 fi
 
-create_job_venv "$REPO_ROOT"
+if [[ ! -f "$VENV/bin/activate" ]]; then
+    echo "Missing $VENV. Rebuild it with scripts/build_or_update_venv.sh." >&2
+    exit 1
+fi
+# shellcheck disable=SC1091
+source "$VENV/bin/activate"
 
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
 export PYTHONPATH="$REPO_ROOT/src"
