@@ -47,7 +47,7 @@ class ModelConfig(BaseModel):
 
 
 class DataConfig(BaseModel):
-    root: Path = Path("data/proofjudge")
+    root: Path = Path("data/mathlibpr")
 
 
 class TrainingConfig(BaseModel):

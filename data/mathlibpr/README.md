@@ -78,6 +78,41 @@ During the scan, we encountered several declarations that did not make it into o
 
 
 
+## Filtering convention edits
+
+Many of the triples in `pairs.jsonl` differ because a revision followed a Mathlib convention, not because the two proofs are different arguments. The filter compares each pair after separating comments from code and normalizing those conventions. It keeps a triple when the proof script changes shape, or when the code matches and the comment wording itself changes.
+
+A script changes shape when a real step appears or disappears: `calc`, `induction`, `cases`, `ext`, or a `have` or `let` whose body is itself a proof. A hammer such as `grind` or `omega` swapped for a written proof counts too. `aesop` and `cat_disch` are the same discharger. The same tactics aimed at a different lemma do not count, and neither does a `have` or `let` that only names a term or an instance. Comment edits that only reflow text, including `n + 1` versus `n+1`, are dropped. A convention change in the code is still dropped when a comment changes along with it.
+
+What gets dropped is the convention layer: renames and coercions (`(n : ℕ)` versus `n`, `eq_zero_or_pos` versus `eq_or_ne`), lemmas moved inside one `simp` or `rw` list, tactic synonyms (`apply`/`exact`, `field_simp`/`simp`, `obtain`/`cases`, `induction'` versus structured `induction`), reordered bullets, layout (`@`, pipes, parentheses, `by exact` versus a bare term), and the same proof with new binders, holes, projections, or explicit arguments. Folding a term-mode `have` into `simp`, writing `#s` for `s.card`, or replacing borel boilerplate with `borelize` is the same kind of edit.
+
+`pairs.substantive.jsonl` is the kept subset (539 of 2,379). `pairs.annotated.jsonl` labels every triple with `metadata.diff_class`. Regenerate both with `python -m proof_quality.dataset_generation.filter`.
+
+
+| Class             | Rows | Share | Verdict | What it is                                                                         |
+| ----------------- | ---- | ----- | ------- | ---------------------------------------------------------------------------------- |
+| `construction`    | 519  | 21.8% | keep    | The script gains or loses a real step, or a hammer is swapped for a written proof. |
+| `comment`         | 20   | 0.8%  | keep    | The Lean code matches, and the comment wording itself changes.                     |
+| `comment_spacing` | 15   | 0.6%  | drop    | The code matches, and the comments differ only by spacing or reflow.               |
+| `style`           | 113  | 4.7%  | drop    | Tactic synonyms, `@`, pipes, or `by exact` versus a bare term.                     |
+| `layout`          | 125  | 5.3%  | drop    | Parentheses, bullets, or other punctuation.                                        |
+| `rename`          | 528  | 22.2% | drop    | An identifier or namespace edit, including one lemma name replaced in place.       |
+| `simp_list`       | 186  | 7.8%  | drop    | Lemmas added or removed inside one `simp` or `rw` list.                            |
+| `bookkeeping`     | 127  | 5.3%  | drop    | Binders, holes, projections, or explicit arguments on the same proof.              |
+| `minor`           | 746  | 31.4% | drop    | A non-structural tweak, such as deleting a redundant `rw`.                         |
+
+
 ### On length bias
 
-A natural / "dumb" heuristic for a proof that gets accepted into Mathlib is "the shorter, the better". Indeed, this is often the case when a more elegant set of tactics may achieve the same goal. However, we also want to capture the cases where this rule doesn't hold, since there are other quality signals in a proof besides length. Our dataset, while not perfectly balanced, represents both cases well: there are 1,638 triplets (71.9%) where the chosen proof is shorter than the rejected one, while the other 640 (28.1%) have a rejected proof that is shorter than the chosen. 192 of the triplets are edits the accepted snapshot restored, marked with `metadata.proof_reverted`. On that slice the two directions are close: the chosen proof is shorter in 89, and the rejected proof is shorter in 101.
+A natural / "dumb" heuristic for a proof that gets accepted into Mathlib is "the shorter, the better". Indeed, this is often the case when a more elegant set of tactics may achieve the same goal. However, we also want to capture the cases where this rule doesn't hold, since there are other quality signals in a proof besides length. In the filtered `pairs.substantive.jsonl`, 430 triplets (79.8%) have a chosen proof shorter than the rejected one, 107 (19.9%) have a chosen proof that is longer, and 2 are the same length.
+
+### Dev and test
+
+Training reads `dev.jsonl` and evaluates on `test.jsonl`. Declarations from the same pull request stay in one split, so a review's other edits cannot leak into the held-out set. Pull requests are shuffled with seed 1998 and assigned whole until the test set is as close as possible to 20% of the filtered triples.
+
+| Split | Triples | Pull requests | Chosen shorter | Chosen longer | Same length |
+| ----- | ------: | ------------: | -------------: | ------------: | ----------: |
+| dev   | 431     | 283           | 347 (80.5%)    | 83 (19.3%)    | 1           |
+| test  | 108     | 74            | 83 (76.9%)     | 24 (22.2%)    | 1           |
+
+Regenerate both files with `python -m proof_quality.dataset_generation.split`. The training configs read them from `data/mathlibpr`.

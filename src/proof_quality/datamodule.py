@@ -10,7 +10,7 @@ from transformers import PreTrainedTokenizerBase
 from proof_quality.schema import TokenizedPreferenceBatch
 
 
-ROOT = Path(__file__).resolve().parent / "data" / "proofjudge"
+ROOT = Path(__file__).resolve().parents[2] / "data" / "mathlibpr"
 SPLITS = ("dev", "test")
 
 

@@ -19,4 +19,4 @@ model:
   lora_dropout: 0.0
   max_length: 4096
 data:
-  root: data/proofjudge
+  root: data/mathlibpr

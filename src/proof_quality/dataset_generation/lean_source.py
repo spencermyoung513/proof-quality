@@ -693,20 +693,38 @@ def _skip_string(text: str, index: int) -> int:
     return len(text)
 
 
-def _strip_comments(text: str) -> str:
+def split_comments(text: str) -> tuple[str, str]:
+    """Split Lean text into code and the comment wording inside it.
+
+    Comment markers are removed. Block comments leave a space in the code so
+    the surrounding tokens do not join. The comment string keeps each comment
+    in order, separated by newlines.
+    """
     chunks: list[str] = []
+    comments: list[str] = []
     index = 0
     while index < len(text):
         if text.startswith("--", index):
             newline = text.find("\n", index)
+            end = len(text) if newline < 0 else newline
+            comments.append(text[index + 2 : end])
             if newline < 0:
                 break
             index = newline
             continue
         if text.startswith("/-", index):
-            index = _skip_block_comment(text, index)
+            end = _skip_block_comment(text, index)
+            body = text[index + 2 : end]
+            if body.endswith("-/"):
+                body = body[:-2]
+            comments.append(body)
+            index = end
             chunks.append(" ")
             continue
         chunks.append(text[index])
         index += 1
-    return "".join(chunks)
+    return "".join(chunks), "\n".join(comments)
+
+
+def _strip_comments(text: str) -> str:
+    return split_comments(text)[0]
