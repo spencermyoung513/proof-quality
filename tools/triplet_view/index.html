@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proof triples</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1a1a1a;
+      --muted: #5f5f5f;
+      --line: #e2e2e2;
+      --page: #fff;
+      --card: #fff;
+      --del: #ffebe9;
+      --del-text: #ffcecb;
+      --add: #e6ffec;
+      --add-text: #abf2bc;
+      --empty: #f6f8fa;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font: 16px/1.45 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    main {
+      max-width: 76rem;
+      margin: 0 auto;
+      padding: 0 1.5rem 3rem;
+    }
+
+    .pager {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.85rem 0;
+      background: var(--page);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .pager button, .pager input {
+      font: inherit;
+      color: inherit;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .pager button {
+      padding: 0.35rem 0.8rem;
+      cursor: pointer;
+    }
+
+    .pager button:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .pager input {
+      width: 4.5rem;
+      padding: 0.3rem 0.45rem;
+      text-align: right;
+    }
+
+    .pager .of { color: var(--muted); }
+
+    #diff-toggle { margin-left: auto; }
+
+    #diff-toggle[aria-pressed="true"] {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font: 13px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    .statement {
+      margin: 1.25rem 0;
+    }
+
+    .columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.85rem 0 0;
+      background: var(--card);
+      overflow: hidden;
+    }
+
+    h2 {
+      margin: 0 0 0.65rem;
+      padding: 0 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .plain {
+      padding: 0 1rem 1rem;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font: 13px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    .line {
+      display: grid;
+      grid-template-columns: 2.4rem minmax(0, 1fr);
+      min-height: 1.55em;
+    }
+
+    .line.del { background: var(--del); }
+    .line.add { background: var(--add); }
+    .line.empty { background: var(--empty); }
+
+    .line .ln {
+      padding: 0 0.45rem 0 0.2rem;
+      color: #8c959f;
+      text-align: right;
+      user-select: none;
+      font: 12px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    .line code {
+      padding: 0 0.8rem 0 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font: 13px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+
+    .line mark {
+      color: inherit;
+      border-radius: 2px;
+    }
+
+    .line.del mark { background: var(--del-text); }
+    .line.add mark { background: var(--add-text); }
+
+    .message { color: var(--muted); padding-top: 2rem; }
+
+    @media (max-width: 800px) {
+      .columns { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="pager">
+      <button type="button" id="prev">Previous</button>
+      <input id="jump" type="number" min="1" value="1" aria-label="Example number">
+      <span class="of">of <span id="total">0</span></span>
+      <button type="button" id="next">Next</button>
+      <button type="button" id="diff-toggle" aria-pressed="false">Highlight differences</button>
+    </div>
+    <pre class="statement" id="statement"></pre>
+    <div class="columns">
+      <section class="card">
+        <h2>Rejected</h2>
+        <div class="plain" id="rejected"></div>
+      </section>
+      <section class="card">
+        <h2>Accepted</h2>
+        <div class="plain" id="accepted"></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let rows = [];
+    let index = 0;
+    let highlight = false;
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[ch]);
+    }
+
+    function tokenize(line) {
+      return line.match(/\s+|[A-Za-z0-9_']+|./gu) || [];
+    }
+
+    function tokenDiff(left, right) {
+      const a = tokenize(left);
+      const b = tokenize(right);
+      if (a.length * b.length > 80000) {
+        return { left: escapeHtml(left), right: escapeHtml(right) };
+      }
+      const n = a.length;
+      const m = b.length;
+      const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+      for (let i = n - 1; i >= 0; i--) {
+        for (let j = m - 1; j >= 0; j--) {
+          dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+        }
+      }
+      let i = 0;
+      let j = 0;
+      let leftHtml = "";
+      let rightHtml = "";
+      const mark = (token) => `<mark>${escapeHtml(token)}</mark>`;
+      while (i < n && j < m) {
+        if (a[i] === b[j]) {
+          const same = escapeHtml(a[i]);
+          leftHtml += same;
+          rightHtml += same;
+          i++;
+          j++;
+        } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+          leftHtml += mark(a[i]);
+          i++;
+        } else {
+          rightHtml += mark(b[j]);
+          j++;
+        }
+      }
+      while (i < n) leftHtml += mark(a[i++]);
+      while (j < m) rightHtml += mark(b[j++]);
+      return { left: leftHtml, right: rightHtml };
+    }
+
+    function diffLines(rejected, chosen) {
+      const a = rejected.length ? rejected.split(/\r?\n/) : [];
+      const b = chosen.length ? chosen.split(/\r?\n/) : [];
+      const n = a.length;
+      const m = b.length;
+      const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+      for (let i = n - 1; i >= 0; i--) {
+        for (let j = m - 1; j >= 0; j--) {
+          dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+        }
+      }
+      const ops = [];
+      let i = 0;
+      let j = 0;
+      while (i < n && j < m) {
+        if (a[i] === b[j]) {
+          ops.push({ op: "eq", left: a[i], right: b[j] });
+          i++;
+          j++;
+        } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+          ops.push({ op: "del", left: a[i] });
+          i++;
+        } else {
+          ops.push({ op: "ins", right: b[j] });
+          j++;
+        }
+      }
+      while (i < n) ops.push({ op: "del", left: a[i++] });
+      while (j < m) ops.push({ op: "ins", right: b[j++] });
+
+      const lines = [];
+      for (let k = 0; k < ops.length;) {
+        if (ops[k].op === "eq") {
+          lines.push({ kind: "same", left: ops[k].left, right: ops[k].right });
+          k++;
+          continue;
+        }
+        const dels = [];
+        const ins = [];
+        while (k < ops.length && ops[k].op !== "eq") {
+          if (ops[k].op === "del") dels.push(ops[k].left);
+          else ins.push(ops[k].right);
+          k++;
+        }
+        const paired = Math.min(dels.length, ins.length);
+        for (let t = 0; t < paired; t++) {
+          const html = tokenDiff(dels[t], ins[t]);
+          lines.push({
+            kind: "change",
+            left: dels[t],
+            right: ins[t],
+            leftHtml: html.left,
+            rightHtml: html.right,
+          });
+        }
+        for (let t = paired; t < dels.length; t++) lines.push({ kind: "del", left: dels[t], right: null });
+        for (let t = paired; t < ins.length; t++) lines.push({ kind: "ins", left: null, right: ins[t] });
+      }
+      return lines;
+    }
+
+    function lineRow(kind, number, text, html) {
+      const row = document.createElement("div");
+      row.className = `line ${kind}`;
+      const gutter = document.createElement("span");
+      gutter.className = "ln";
+      gutter.textContent = number ? String(number) : "";
+      const code = document.createElement("code");
+      if (html == null) code.textContent = text || "";
+      else code.innerHTML = html;
+      row.append(gutter, code);
+      return row;
+    }
+
+    function syncHeights() {
+      const leftLines = $("rejected").children;
+      const rightLines = $("accepted").children;
+      if (!leftLines.length || leftLines.length !== rightLines.length) return;
+      for (let i = 0; i < leftLines.length; i++) {
+        leftLines[i].style.minHeight = "0";
+        rightLines[i].style.minHeight = "0";
+      }
+      for (let i = 0; i < leftLines.length; i++) {
+        const height = Math.max(leftLines[i].scrollHeight, rightLines[i].scrollHeight);
+        const px = `${height}px`;
+        leftLines[i].style.minHeight = px;
+        rightLines[i].style.minHeight = px;
+      }
+    }
+
+    function renderProofs(row) {
+      const left = $("rejected");
+      const right = $("accepted");
+      left.replaceChildren();
+      right.replaceChildren();
+      if (!highlight) {
+        left.className = "plain";
+        right.className = "plain";
+        left.textContent = row.rejected;
+        right.textContent = row.chosen;
+        return;
+      }
+      left.className = "lines";
+      right.className = "lines";
+      let leftNo = 0;
+      let rightNo = 0;
+      for (const line of diffLines(row.rejected, row.chosen)) {
+        if (line.left != null) leftNo++;
+        if (line.right != null) rightNo++;
+        if (line.kind === "same") {
+          left.append(lineRow("same", leftNo, line.left));
+          right.append(lineRow("same", rightNo, line.right));
+        } else if (line.kind === "del") {
+          left.append(lineRow("del", leftNo, line.left));
+          right.append(lineRow("empty", ""));
+        } else if (line.kind === "ins") {
+          left.append(lineRow("empty", ""));
+          right.append(lineRow("add", rightNo, line.right));
+        } else {
+          left.append(lineRow("del", leftNo, null, line.leftHtml));
+          right.append(lineRow("add", rightNo, null, line.rightHtml));
+        }
+      }
+      syncHeights();
+    }
+
+    function statementOf(prompt) {
+      const marker = "following declaration.\n\n";
+      const at = prompt.indexOf(marker);
+      return (at >= 0 ? prompt.slice(at + marker.length) : prompt).replace(/\s+$/, "");
+    }
+
+    function keyOf(row) {
+      return `${row.metadata.pr_number}/${row.metadata.declaration_name}`;
+    }
+
+    function parsePairs(text) {
+      const parsed = [];
+      for (const line of text.split("\n")) {
+        if (!line.trim()) continue;
+        try { parsed.push(JSON.parse(line)); } catch (_) { /* skip a partial last line */ }
+      }
+      return parsed;
+    }
+
+    function show(next) {
+      if (!rows.length) return;
+      index = Math.max(0, Math.min(rows.length - 1, next));
+      const row = rows[index];
+      $("statement").textContent = statementOf(row.prompt);
+      renderProofs(row);
+      $("jump").value = String(index + 1);
+      $("jump").max = String(rows.length);
+      $("total").textContent = String(rows.length);
+      $("prev").disabled = index === 0;
+      $("next").disabled = index === rows.length - 1;
+      history.replaceState(null, "", `#${encodeURIComponent(keyOf(row))}`);
+      window.scrollTo(0, 0);
+    }
+
+    function showMessage(text) {
+      $("statement").textContent = text;
+      $("statement").classList.add("message");
+      $("rejected").textContent = "";
+      $("accepted").textContent = "";
+    }
+
+    async function loadText() {
+      for (const url of ["/pairs.jsonl", "../../data/mathlibpr/pairs.jsonl"]) {
+        try {
+          const response = await fetch(url, { cache: "no-store" });
+          if (!response.ok) continue;
+          const text = await response.text();
+          if (text.trim().startsWith("{")) return text;
+        } catch (_) { /* try the next path */ }
+      }
+      return "";
+    }
+
+    function startingIndex() {
+      const hash = decodeURIComponent(location.hash.replace(/^#/, ""));
+      const found = rows.findIndex((row) => keyOf(row) === hash);
+      if (found >= 0) return found;
+      if (/^\d+$/.test(hash)) return Number(hash) - 1;
+      return 0;
+    }
+
+    $("prev").addEventListener("click", () => show(index - 1));
+    $("next").addEventListener("click", () => show(index + 1));
+    $("jump").addEventListener("change", () => show(Number($("jump").value) - 1));
+    $("diff-toggle").addEventListener("click", () => {
+      highlight = !highlight;
+      $("diff-toggle").setAttribute("aria-pressed", String(highlight));
+      if (rows.length) renderProofs(rows[index]);
+    });
+    window.addEventListener("resize", () => {
+      if (highlight) syncHeights();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.target.closest("input")) return;
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        show(index + 1);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        show(index - 1);
+      }
+    });
+
+    loadText().then((text) => {
+      rows = text ? parsePairs(text) : [];
+      if (!rows.length) {
+        showMessage("No triples loaded. Run python3 tools/triplet_view/serve.py from the repo.");
+        return;
+      }
+      $("total").textContent = String(rows.length);
+      show(startingIndex());
+    });
+  </script>
+</body>
+</html>
