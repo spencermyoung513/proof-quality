@@ -1,5 +1,5 @@
 run:
-  name: test-run
+  name: example-run
   ckpt_dir: ckpt
   device: mps
   precision: bf16-mixed

@@ -51,6 +51,8 @@ def evaluate(config: TrainingConfig, ckpt: Path) -> None:
         name=f"{config.run.name}-eval",
         project=wandb_project,
         entity=wandb_entity,
+        job_type="eval",
+        tags=["eval"],
     )
     trainer = L.Trainer(
         accelerator=config.run.device,

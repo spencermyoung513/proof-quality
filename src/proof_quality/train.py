@@ -86,6 +86,8 @@ def train(config: TrainingConfig):
         name=config.run.name,
         project=wandb_project,
         entity=wandb_entity,
+        job_type="train",
+        tags=["train"],
     )
     ckpt_dir = config.run.ckpt_dir / config.run.name
     callbacks = [
