@@ -1,5 +1,5 @@
 run:
-  name: gemma-4-E4B-it
+  name: gemma-4-E4B-it-redux
   ckpt_dir: /storage/home/hcoda1/1/syoung328/scratch/weights/proof-quality-ckpt
   device: cuda
   precision: bf16-mixed
