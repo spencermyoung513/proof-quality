@@ -3,17 +3,15 @@
 #   mkdir -p logs
 #   sbatch scripts/train.sh configs/gemma/final.yaml
 #
-# Wall clock defaults to 8 hours. Override at submit time, for example:
-#   sbatch --time=04:00:00 scripts/train.sh configs/gemma/final.yaml
 #
 #SBATCH --job-name=gemma4-lora-train
 #SBATCH --account=gts-smussmann3
 #SBATCH --partition=gpu-l40s
-#SBATCH --qos=embers
+#SBATCH --qos=inferno
 #SBATCH --gres=gpu:L40S:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=48G
-#SBATCH --time=08:00:00
+#SBATCH --time=02:00:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
