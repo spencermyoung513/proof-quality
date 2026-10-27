@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import random
-from collections import defaultdict
 from pathlib import Path
+
+from proof_quality.helpers import get_holdout_indices
 
 
 _REPO = Path(__file__).resolve().parents[3]
@@ -35,36 +35,18 @@ def split_rows(
     """
     if not 0 < test_fraction < 1:
         raise ValueError(f"test_fraction must be between 0 and 1, got {test_fraction}")
-    groups: dict[int, list[int]] = defaultdict(list)
-    for index, row in enumerate(rows):
-        groups[int(row["metadata"]["pr_number"])].append(index)
-    test_prs = _choose_test_prs(groups, len(rows), test_fraction, seed)
-    dev: list[dict] = []
-    test: list[dict] = []
-    for row in rows:
-        split = "test" if int(row["metadata"]["pr_number"]) in test_prs else "dev"
-        labeled = {**row, "metadata": {**row["metadata"], "split": split}}
-        (test if split == "test" else dev).append(labeled)
+    keep, holdout = get_holdout_indices(
+        [int(row["metadata"]["pr_number"]) for row in rows],
+        fraction=test_fraction,
+        seed=seed,
+    )
+    dev = [_labeled(rows[index], "dev") for index in keep]
+    test = [_labeled(rows[index], "test") for index in holdout]
     return dev, test
 
 
-def _choose_test_prs(
-    groups: dict[int, list[int]],
-    total: int,
-    test_fraction: float,
-    seed: int,
-) -> set[int]:
-    target = round(total * test_fraction)
-    order = sorted(groups)
-    random.Random(seed).shuffle(order)
-    chosen: list[int] = []
-    count = 0
-    for pr in order:
-        size = len(groups[pr])
-        if abs(count + size - target) < abs(count - target):
-            chosen.append(pr)
-            count += size
-    return set(chosen)
+def _labeled(row: dict, split: str) -> dict:
+    return {**row, "metadata": {**row["metadata"], "split": split}}
 
 
 def write_split(

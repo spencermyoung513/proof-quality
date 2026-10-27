@@ -108,7 +108,7 @@ A natural / "dumb" heuristic for a proof that gets accepted into Mathlib is "the
 
 ### Dev and test
 
-Training reads `dev.jsonl` and evaluates on `test.jsonl`. Declarations from the same pull request stay in one split, so a review's other edits cannot leak into the held-out set. Pull requests are shuffled with seed 1998 and assigned whole until the test set is as close as possible to 20% of the filtered triples.
+`dev.jsonl` is the training pool and `test.jsonl` is reserved for the final evaluation script. Declarations from the same pull request stay in one split, so a review's other edits cannot leak into the held-out set. Pull requests are shuffled with seed 1998 and assigned whole until the test set is as close as possible to 20% of the filtered triples. A training run then holds out about 10% of `dev.jsonl` for validation, again keeping each pull request intact. That slice is chosen when the run starts and is not written to disk.
 
 | Split | Triples | Pull requests | Chosen shorter | Chosen longer | Same length |
 | ----- | ------: | ------------: | -------------: | ------------: | ----------: |

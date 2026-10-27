@@ -19,3 +19,4 @@ model:
   max_length: 1024
 data:
   root: data/mathlibpr
+  val_fraction: 0.1

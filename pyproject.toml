@@ -25,3 +25,4 @@ extend-ignore = ["F722"]
 
 [project.scripts]
 train = "proof_quality.train:main"
+evaluate = "proof_quality.evaluate:main"

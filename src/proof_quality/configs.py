@@ -36,6 +36,7 @@ class OptimizerConfig(BaseModel):
     weight_decay: float = 0.01
     learning_rate: float = 1e-3
     warmup_ratio: float = 0.05
+    gradient_clip_val: float = 1.0
 
 
 class ModelConfig(BaseModel):
@@ -48,6 +49,13 @@ class ModelConfig(BaseModel):
 
 class DataConfig(BaseModel):
     root: Path = Path("data/mathlibpr")
+    val_fraction: float = 0.1
+
+    @field_validator("val_fraction")
+    def val_fraction_is_sensible(cls, v: float) -> float:
+        if not 0 < v < 1:
+            raise ValueError(f"val_fraction must be between 0 and 1, got {v}")
+        return v
 
 
 class TrainingConfig(BaseModel):

@@ -66,6 +66,8 @@ def train(config: TrainingConfig):
         batch_size=config.optimizer.batch_size,
         max_length=config.model.max_length,
         root=config.data.root,
+        val_fraction=config.data.val_fraction,
+        seed=config.run.seed,
     )
     datamodule.setup("fit")
 
@@ -106,6 +108,7 @@ def train(config: TrainingConfig):
         fast_dev_run=config.run.smoke_test,
         # Skip Lightning checkpoint so we can save only the LoRA adapter + reward head.
         enable_checkpointing=False,
+        gradient_clip_val=config.optimizer.gradient_clip_val,
     )
     trainer.fit(model=model, datamodule=datamodule)
 

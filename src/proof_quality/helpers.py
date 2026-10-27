@@ -1,6 +1,8 @@
 import random
 import numpy as np
 import torch
+from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
 from torch import Tensor
 import lightning as L
@@ -14,6 +16,48 @@ def fix_random_seed(random_seed: int | None):
         random.seed(random_seed)
         np.random.seed(random_seed)
         torch.manual_seed(random_seed)
+
+
+def get_holdout_indices(
+    group_ids: Sequence[int],
+    *,
+    fraction: float,
+    seed: int,
+) -> tuple[list[int], list[int]]:
+    """Return ``(keep, holdout)`` indices.
+
+    Rows that share a group id stay on the same side. Groups are shuffled with
+    ``seed`` and assigned whole until the holdout is as close as possible to
+    ``fraction`` of the rows. Both lists follow the original row order.
+    """
+    if not 0 < fraction < 1:
+        raise ValueError(f"fraction must be between 0 and 1, got {fraction}")
+    groups: dict[int, list[int]] = defaultdict(list)
+    for index, group in enumerate(group_ids):
+        groups[int(group)].append(index)
+    held_out = _choose_holdout_groups(groups, len(group_ids), fraction, seed)
+    keep = [index for index, group in enumerate(group_ids) if group not in held_out]
+    holdout = [index for index, group in enumerate(group_ids) if group in held_out]
+    return keep, holdout
+
+
+def _choose_holdout_groups(
+    groups: dict[int, list[int]],
+    total: int,
+    fraction: float,
+    seed: int,
+) -> set[int]:
+    target = round(total * fraction)
+    order = sorted(groups)
+    random.Random(seed).shuffle(order)
+    chosen: list[int] = []
+    count = 0
+    for group in order:
+        size = len(groups[group])
+        if abs(count + size - target) < abs(count - target):
+            chosen.append(group)
+            count += size
+    return set(chosen)
 
 
 def get_ckpt_callbacks(ckpt_dir: Path) -> list[Callback]:

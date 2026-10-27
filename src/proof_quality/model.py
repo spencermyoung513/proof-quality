@@ -138,11 +138,9 @@ class RewardModel(L.LightningModule):
 
         return rewards
 
-    def training_step(
-        self,
-        batch: TokenizedPreferenceBatch,
-        batch_idx: int,
-    ) -> Float[Tensor, ""]:
+    def _compute_loss_and_pairwise_acc(
+        self, batch: TokenizedPreferenceBatch
+    ) -> tuple[Float[Tensor, ""], Float[Tensor, ""]]:
         chosen_rewards = self.forward(
             batch["chosen_input_ids"], batch["chosen_attention_mask"]
         )
@@ -151,6 +149,14 @@ class RewardModel(L.LightningModule):
         )
         loss = -F.logsigmoid(chosen_rewards - rejected_rewards).mean()
         acc = (chosen_rewards > rejected_rewards).float().mean()
+        return loss, acc
+
+    def training_step(
+        self,
+        batch: TokenizedPreferenceBatch,
+        batch_idx: int,
+    ) -> Float[Tensor, ""]:
+        loss, acc = self._compute_loss_and_pairwise_acc(batch)
         self.log("train/loss", loss, prog_bar=True, on_step=True)
         self.log("train/acc", acc, on_epoch=True, on_step=False)
         return loss
@@ -160,16 +166,19 @@ class RewardModel(L.LightningModule):
         batch: TokenizedPreferenceBatch,
         batch_idx: int,
     ):
-        chosen_rewards = self.forward(
-            batch["chosen_input_ids"], batch["chosen_attention_mask"]
-        )
-        rejected_rewards = self.forward(
-            batch["rejected_input_ids"], batch["rejected_attention_mask"]
-        )
-        loss = -F.logsigmoid(chosen_rewards - rejected_rewards).mean()
-        acc = (chosen_rewards > rejected_rewards).float().mean()
+        loss, acc = self._compute_loss_and_pairwise_acc(batch)
         self.log("val/loss", loss, prog_bar=True, on_epoch=True)
         self.log("val/acc", acc, on_epoch=True)
+        return loss
+
+    def test_step(
+        self,
+        batch: TokenizedPreferenceBatch,
+        batch_idx: int,
+    ):
+        loss, acc = self._compute_loss_and_pairwise_acc(batch)
+        self.log("test/loss", loss, prog_bar=True, on_epoch=True)
+        self.log("test/acc", acc, on_epoch=True)
         return loss
 
     def configure_optimizers(self):

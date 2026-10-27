@@ -18,4 +18,12 @@ To kick off a training run, first fill out a config (using [configs/test.yaml](c
 uv run train --config <path-to-your-config>
 ```
 
-The training run will log to Weights and Biases.
+Training holds out a small percentage (default: 10%) of the dev set for validation and logs to Weights and Biases.
+
+## Evaluating a Model
+
+To score a saved checkpoint on the test set, use the same config as training and point to the weights checkpoint you want to evaluate. Then:
+
+```bash
+uv run evaluate --config <path-to-your-config> --ckpt <path-to-checkpoint>
+```
