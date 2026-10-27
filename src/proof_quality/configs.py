@@ -37,6 +37,7 @@ class OptimizerConfig(BaseModel):
     learning_rate: float = 1e-3
     warmup_ratio: float = 0.05
     gradient_clip_val: float = 1.0
+    reward_centering_coeff: float | None = None
 
 
 class ModelConfig(BaseModel):

@@ -77,6 +77,7 @@ def train(config: TrainingConfig):
         learning_rate=config.optimizer.learning_rate,
         weight_decay=config.optimizer.weight_decay,
         warmup_ratio=config.optimizer.warmup_ratio,
+        reward_centering_coeff=config.optimizer.reward_centering_coeff,
         lora_rank=config.model.lora_rank,
         lora_scaling_factor=config.model.lora_scaling_factor,
         lora_dropout=config.model.lora_dropout,

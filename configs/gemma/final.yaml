@@ -12,6 +12,7 @@ optimizer:
   weight_decay: 0.01
   learning_rate: 2e-4
   warmup_ratio: 0.05
+  reward_centering_coeff: 0.01
 model:
   base_lm: google/gemma-4-E4B-it
   lora_rank: 32
